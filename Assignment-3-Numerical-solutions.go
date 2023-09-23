@@ -16,9 +16,6 @@ var INTERVAL = [2]float64{0, 0.5}
 
 const STEP float64 = 0.1
 
-//var n = int(INTERVAL[1] / STEP)
-//var ys = make([]float64, n)
-
 // EulerMethod is implementation from slide 13
 func EulerMethod(xs, ys, yds []float64) []float64 {
 	n := len(xs)
@@ -30,8 +27,25 @@ func EulerMethod(xs, ys, yds []float64) []float64 {
 	return yem
 }
 
-func EulerCauchyMethod(interval [2]float64, h float64) {
+// TODO check yhats incorrect
+func EulerCauchyMethod(xs, ys, yds []float64) []float64 {
+	n := len(xs)
+	yecm := make([]float64, n)
+	yecm[0] = ys[0]
 
+	// TODO L4 Slide 16 check second line
+	yhats := make([]float64, n)
+	yhats[0] = ys[0]
+	for i := 1; i < n; i++ {
+		yhats[i] = ys[i-1] + STEP*yds[i-1]
+	}
+
+	for i := 1; i < n; i++ {
+		fraction := (yds[i-1] + yhats[i]) / 2
+		yecm[i] = yecm[i-1] * STEP * fraction
+	}
+
+	return yecm
 }
 
 // slide 24
@@ -62,9 +76,14 @@ func FirstOrderDerivative(x, y float64) float64 {
 
 func main() {
 	xs, ys, yds := getValues()
-	yme := EulerMethod(xs, ys, yds)
-	//fmt.Printf("x \t| y_true\n")
-	for _, val := range yme {
+	//yme := EulerMethod(xs, ys, yds)
+	////fmt.Printf("x \t| y \t| y_true\n")
+	//for _, val := range yme {
+	//	fmt.Println(val)
+	//}
+
+	ymce := EulerMethod(xs, ys, yds)
+	for _, val := range ymce {
 		fmt.Println(val)
 	}
 }
@@ -72,7 +91,7 @@ func main() {
 func getValues() ([]float64, []float64, []float64) {
 	var xs, ys, yds []float64
 
-	for x := INTERVAL[0]; x < INTERVAL[1]; x += STEP {
+	for x := INTERVAL[0]; x <= INTERVAL[1]; x += STEP {
 		xs = append(xs, x)
 		ys = append(ys, Equation(x))
 		yds = append(yds, FirstOrderDerivative(x, ys[len(ys)-1]))
