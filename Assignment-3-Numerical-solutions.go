@@ -50,8 +50,19 @@ func EulerCauchyMethod(xs, ys, yds []float64) []float64 {
 }
 
 // slide 24
-func RungeKuttaMethod(interval [2]float64, h float64) {
-
+func RungeKuttaMethod(xs, ys, yds []float64) []float64 {
+	n := len(xs)
+	yrkts := make([]float64, n)
+	yrkts[0] = ys[0]
+	for i := 0; i < n-1; i++ {
+		k1 := STEP * yds[i]
+		k2 := STEP * FirstOrderDerivative(xs[i]+0.5*STEP, ys[i]+0.5*k1)
+		k3 := STEP * FirstOrderDerivative(xs[i]+0.5*STEP, ys[i]+0.5*k2)
+		k4 := STEP * FirstOrderDerivative(xs[i]+STEP, ys[i]+k3)
+		deltaY := (k1 + 2*k2 + 2*k3 + k4) / 6
+		yrkts[i+1] = ys[i] + deltaY
+	}
+	return yrkts
 }
 
 func AdamsMethod(interval [2]float64, h float64) {
@@ -83,9 +94,14 @@ func main() {
 	//	fmt.Printf(ys[i], val)
 	//}
 
-	ymce := EulerCauchyMethod(xs, ys, yds) // ymce
-	for _, val := range ymce {
-		fmt.Println(val)
+	//ymce := EulerCauchyMethod(xs, ys, yds) // ymce
+	//for _, val := range ymce {
+	//	fmt.Println(val)
+	//}
+
+	yrkts := RungeKuttaMethod(xs, ys, yds)
+	for _, val := range yrkts {
+		fmt.Printf("y_k %.9f\n", val)
 	}
 }
 
