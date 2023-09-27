@@ -13,6 +13,7 @@ problem statement.
 */
 
 var INTERVAL = [2]float64{0, 0.5}
+var INTERVAL_ADAMS = [2]float64{0, 1}
 
 const STEP float64 = 0.1
 
@@ -27,6 +28,7 @@ func EulerMethod(xs, ys, yds []float64) []float64 {
 	return yem
 }
 
+// EulerCauchyMethod is implementation of Euler-Cauchy method from slide 16
 // TODO check yhats incorrect
 func EulerCauchyMethod(xs, ys, yds []float64) []float64 {
 	n := len(xs)
@@ -49,7 +51,7 @@ func EulerCauchyMethod(xs, ys, yds []float64) []float64 {
 	return yecm
 }
 
-// slide 24
+// RungeKuttaMethod is implementation of Runge-Kutta method from slide 24
 func RungeKuttaMethod(xs, ys, yds []float64) []float64 {
 	n := len(xs)
 	yrkts := make([]float64, n)
@@ -65,8 +67,21 @@ func RungeKuttaMethod(xs, ys, yds []float64) []float64 {
 	return yrkts
 }
 
-func AdamsMethod(interval [2]float64, h float64) {
+// MultistepAdamsMethod
+func MultistepAdamsMethod(xs, ys, yds []float64) []float64 {
+	n := len(xs)
+	adams := make([]float64, n)
+	// Method requires three previous values of y
+	adams[0] = ys[0]
+	adams[1] = ys[1]
+	adams[2] = ys[2]
+	adams[3] = ys[3]
 
+	for i := 4; i < n; i++ {
+		bracket := 55*yds[i-1] - 59*yds[i-2] + 37*yds[i-3] - 9*yds[i-4]
+		adams[i] = adams[i-1] + STEP/24*bracket
+	}
+	return adams
 }
 
 // Equation() computes y = tg(x) - x
@@ -87,7 +102,7 @@ func FirstOrderDerivative(x, y float64) float64 {
 }
 
 func main() {
-	xs, ys, yds := getValues()
+	// xs, ys, yds := getValues(INTERVAL)
 	// yme := EulerMethod(xs, ys, yds)
 	fmt.Printf("x \t| y \t| y_true\n")
 	//for i, val := range yme {
@@ -99,16 +114,22 @@ func main() {
 	//	fmt.Println(val)
 	//}
 
-	yrkts := RungeKuttaMethod(xs, ys, yds)
-	for _, val := range yrkts {
-		fmt.Printf("y_k %.9f\n", val)
+	//yrkts := RungeKuttaMethod(xs, ys, yds)
+	//for _, val := range yrkts {
+	//	fmt.Printf("y_k %.9f\n", val)
+	//}
+
+	xs, ys, yds := getValues(INTERVAL_ADAMS)
+	yadams := MultistepAdamsMethod(xs, ys, yds)
+	for i, val := range yadams {
+		fmt.Printf("y_k(%d) %.9f\n", i, val)
 	}
 }
 
-func getValues() ([]float64, []float64, []float64) {
+func getValues(interval [2]float64) ([]float64, []float64, []float64) {
 	var xs, ys, yds []float64
 
-	for x := INTERVAL[0]; x <= INTERVAL[1]; x += STEP {
+	for x := interval[0]; x <= interval[1]; x += STEP {
 		xs = append(xs, x)
 		ys = append(ys, Equation(x))
 		yds = append(yds, FirstOrderDerivative(x, ys[len(ys)-1]))
