@@ -2,21 +2,16 @@ package main
 
 import (
 	"fmt"
-	"github.com/wcharczuk/go-chart/v2"
 	"math"
 	"os"
+
+	"github.com/wcharczuk/go-chart/v2"
 )
 
-// o get gonum.org/v1/plot/...
-/*
-Solve the ODE numerically using the four given methods
-(Lecture 4, slides 13, 17, 24, 28). Attach a Python script and one graph of
-solutions for all methods along with the exact solution specified in the
-problem statement.
-*/
-
-var INTERVAL = [2]float64{0, 0.5}
-var INTERVAL_ADAMS = [2]float64{0, 1}
+var (
+	INTERVAL       = [2]float64{0, 0.5}
+	INTERVAL_ADAMS = [2]float64{0, 1}
+)
 
 const STEP float64 = 0.1
 
@@ -32,17 +27,14 @@ func EulerMethod(xs, ys, yds []float64) []float64 {
 }
 
 // EulerCauchyMethod is implementation of Euler-Cauchy method from slide 16
-// TODO check yhats incorrect
-func EulerCauchyMethod(xs, ys, yds []float64) []float64 {
+func EulerCauchyMethod(xs, ys, yds []float64) ([]float64, []float64) {
 	n := len(xs)
 
-	// TODO L4 Slide 16 check second line
 	yhats := make([]float64, n)
-	yhats[0] = 0 // DOENST EXIST
+	// DOESN'T EXIST so yhats[0] is 0 by default
 	for i := 1; i < n; i++ {
 		yhats[i] = ys[i-1] + STEP*yds[i-1]
 	}
-	// fmt.Println(yhats)
 
 	yecm := make([]float64, n)
 	yecm[0] = ys[0]
@@ -51,7 +43,7 @@ func EulerCauchyMethod(xs, ys, yds []float64) []float64 {
 		fraction := (yds[i-1] + hatDirr) / 2
 		yecm[i] = yecm[i-1] + STEP*fraction
 	}
-	return yecm
+	return yecm, yhats
 }
 
 // RungeKuttaMethod is implementation of Runge-Kutta method from slide 24
@@ -70,7 +62,7 @@ func RungeKuttaMethod(xs, ys, yds []float64) []float64 {
 	return yrkts
 }
 
-// MultistepAdamsMethod
+// MultistepAdamsMethod is implementation of Multistep Adams method from slide 28
 func MultistepAdamsMethod(xs, ys, yds []float64) []float64 {
 	n := len(xs)
 	adams := make([]float64, n)
@@ -104,47 +96,6 @@ func FirstOrderDerivative(x, y float64) float64 {
 	return math.Pow(sum, 2)
 }
 
-func main() {
-	xs, ys, yds := getValues(INTERVAL)
-	yme := EulerMethod(xs, ys, yds)
-	fmt.Println("EulerMethod")
-	fmt.Printf(" k | x   |\ty \t| y_true\n")
-	for i := range yme {
-		fmt.Printf("%2d | %.1f | %.9f  | %.9f \n", i, xs[i], yme[i], ys[i])
-	}
-
-	fmt.Println("EulerCauchyMethod")
-	fmt.Printf(" k | x   |\ty \t| y_true\n")
-	ymce := EulerCauchyMethod(xs, ys, yds)
-	for i := range ymce {
-		fmt.Printf("%2d | %.1f | %.9f  | %.9f \n", i, xs[i], ymce[i], ys[i])
-	}
-
-	fmt.Println("RungeKuttaMethod")
-	fmt.Printf(" k | x   |\ty \t| y_true\n")
-	yrkts := RungeKuttaMethod(xs, ys, yds)
-	for _, val := range yrkts {
-		fmt.Printf("y_k %.9f\n", val)
-	}
-
-	fmt.Println("MultistepAdamsMethod")
-	fmt.Printf(" k | x   |\ty \t| y_true\n")
-	xas, yas, yads := getValues(INTERVAL_ADAMS)
-	yadams := MultistepAdamsMethod(xas, yas, yads)
-	for i := range yadams {
-		fmt.Printf("%2d | %.1f | %.9f  | %.9f \n", i, xas[i], yadams[i], yas[i])
-	}
-
-	series := []chart.Series{
-		chart.ContinuousSeries{XValues: xs, YValues: yme},
-		chart.ContinuousSeries{XValues: xs, YValues: ymce},
-		chart.ContinuousSeries{XValues: xs, YValues: yrkts},
-		chart.ContinuousSeries{XValues: xas, YValues: yadams},
-	}
-
-	PlotGraphs(series)
-}
-
 func getValues(interval [2]float64) ([]float64, []float64, []float64) {
 	var xs, ys, yds []float64
 
@@ -156,15 +107,67 @@ func getValues(interval [2]float64) ([]float64, []float64, []float64) {
 	return xs, ys, yds
 }
 
-func Answer(x, yTrue float64) string {
-	return fmt.Sprintf("%.2f\t| %.9f", x, yTrue)
+func printParamsTable(method string, xs, ys, dy, ym, yhat []float64) {
+	fmt.Println(method)
+	if yhat != nil {
+		fmt.Print(" k | x   |\ty \t| y_hats       |y_true         | eps         | dy\n")
+		for i := range ym {
+			fmt.Printf("%2d | %.1f | %.9f  | %.9f  | %.9f   | %.9f | %.9f   \n", i, xs[i], ym[i], yhat[i], ys[i], math.Abs(ym[i]-ys[i]), dy[i])
+		}
+	} else {
+		fmt.Printf(" k | x   |\ty \t| y_true\t| eps \t\t| dy\n")
+		for i := range ym {
+			fmt.Printf("%2d | %.1f | %.9f  | %.9f   | %.9f   | %.9f \n", i, xs[i], ym[i], ys[i], math.Abs(ym[i]-ys[i]), dy[i])
+		}
+	}
+	fmt.Println("----------------------------------------------------------------------")
 }
 
 func PlotGraphs(series []chart.Series) {
 	graph := chart.Chart{
+		Title:  "Comparison of different methods",
 		Series: series,
+		DPI:    300.0,
+		Width:  1600,
+		Height: 900,
+	}
+	graph.XAxis.Name = "X"
+	graph.YAxis.Name = "Y"
+	graph.TitleStyle.FontSize = 10.0
+	graph.Elements = []chart.Renderable{
+		chart.Legend(&graph),
 	}
 	f, _ := os.Create("output.png")
 	defer f.Close()
 	graph.Render(chart.PNG, f)
+}
+
+func main() {
+	xs, ys, yds := getValues(INTERVAL)
+
+	yme := EulerMethod(xs, ys, yds)
+	printParamsTable("EulerMethod", xs, ys, yds, yme, nil)
+
+	ymce, yhats := EulerCauchyMethod(xs, ys, yds)
+	printParamsTable("EulerCauchyMethod", xs, ys, yds, ymce, yhats)
+
+	yrkts := RungeKuttaMethod(xs, ys, yds)
+	printParamsTable("RungeKuttaMethod", xs, ys, yds, yrkts, nil)
+
+	xas, yas, yads := getValues(INTERVAL_ADAMS)
+	yadams := MultistepAdamsMethod(xas, yas, yads)
+	printParamsTable("MultistepAdamsMethod", xas, yas, yads, yadams, nil)
+
+	defStyle := chart.Style{
+		StrokeWidth:     5,
+		StrokeDashArray: []float64{0.1, 0.2, 0.3, 0.4},
+	}
+	series := []chart.Series{
+		chart.ContinuousSeries{Style: defStyle, XValues: xs, YValues: yme, Name: "Euler"},
+		chart.ContinuousSeries{Style: defStyle, XValues: xs, YValues: ymce, Name: "Euler Cauchy"},
+		chart.ContinuousSeries{Style: defStyle, XValues: xs, YValues: yrkts, Name: "Runge Kutta"},
+		chart.ContinuousSeries{Style: defStyle, XValues: xas, YValues: yadams, Name: "Adam"},
+	}
+
+	PlotGraphs(series)
 }
