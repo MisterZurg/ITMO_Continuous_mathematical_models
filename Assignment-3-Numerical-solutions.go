@@ -2,9 +2,12 @@ package main
 
 import (
 	"fmt"
+	"github.com/wcharczuk/go-chart/v2"
 	"math"
+	"os"
 )
 
+// o get gonum.org/v1/plot/...
 /*
 Solve the ODE numerically using the four given methods
 (Lecture 4, slides 13, 17, 24, 28). Attach a Python script and one graph of
@@ -102,28 +105,44 @@ func FirstOrderDerivative(x, y float64) float64 {
 }
 
 func main() {
-	// xs, ys, yds := getValues(INTERVAL)
-	// yme := EulerMethod(xs, ys, yds)
-	fmt.Printf("x \t| y \t| y_true\n")
-	//for i, val := range yme {
-	//	fmt.Printf(ys[i], val)
-	//}
-
-	//ymce := EulerCauchyMethod(xs, ys, yds) // ymce
-	//for _, val := range ymce {
-	//	fmt.Println(val)
-	//}
-
-	//yrkts := RungeKuttaMethod(xs, ys, yds)
-	//for _, val := range yrkts {
-	//	fmt.Printf("y_k %.9f\n", val)
-	//}
-
-	xs, ys, yds := getValues(INTERVAL_ADAMS)
-	yadams := MultistepAdamsMethod(xs, ys, yds)
-	for i, val := range yadams {
-		fmt.Printf("y_k(%d) %.9f\n", i, val)
+	xs, ys, yds := getValues(INTERVAL)
+	yme := EulerMethod(xs, ys, yds)
+	fmt.Println("EulerMethod")
+	fmt.Printf(" k | x   |\ty \t| y_true\n")
+	for i := range yme {
+		fmt.Printf("%2d | %.1f | %.9f  | %.9f \n", i, xs[i], yme[i], ys[i])
 	}
+
+	fmt.Println("EulerCauchyMethod")
+	fmt.Printf(" k | x   |\ty \t| y_true\n")
+	ymce := EulerCauchyMethod(xs, ys, yds)
+	for i := range ymce {
+		fmt.Printf("%2d | %.1f | %.9f  | %.9f \n", i, xs[i], ymce[i], ys[i])
+	}
+
+	fmt.Println("RungeKuttaMethod")
+	fmt.Printf(" k | x   |\ty \t| y_true\n")
+	yrkts := RungeKuttaMethod(xs, ys, yds)
+	for _, val := range yrkts {
+		fmt.Printf("y_k %.9f\n", val)
+	}
+
+	fmt.Println("MultistepAdamsMethod")
+	fmt.Printf(" k | x   |\ty \t| y_true\n")
+	xas, yas, yads := getValues(INTERVAL_ADAMS)
+	yadams := MultistepAdamsMethod(xas, yas, yads)
+	for i := range yadams {
+		fmt.Printf("%2d | %.1f | %.9f  | %.9f \n", i, xas[i], yadams[i], yas[i])
+	}
+
+	series := []chart.Series{
+		chart.ContinuousSeries{XValues: xs, YValues: yme},
+		chart.ContinuousSeries{XValues: xs, YValues: ymce},
+		chart.ContinuousSeries{XValues: xs, YValues: yrkts},
+		chart.ContinuousSeries{XValues: xas, YValues: yadams},
+	}
+
+	PlotGraphs(series)
 }
 
 func getValues(interval [2]float64) ([]float64, []float64, []float64) {
@@ -139,4 +158,13 @@ func getValues(interval [2]float64) ([]float64, []float64, []float64) {
 
 func Answer(x, yTrue float64) string {
 	return fmt.Sprintf("%.2f\t| %.9f", x, yTrue)
+}
+
+func PlotGraphs(series []chart.Series) {
+	graph := chart.Chart{
+		Series: series,
+	}
+	f, _ := os.Create("output.png")
+	defer f.Close()
+	graph.Render(chart.PNG, f)
 }
