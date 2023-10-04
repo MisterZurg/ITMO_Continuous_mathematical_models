@@ -41,6 +41,6 @@ plt.legend()
 > The original data for least-squares fitting could not be found but as the task of such fitting is not
 the main point of this work, constants from the article ($k$ and $S_i$) were taken for illustrative
 measures. The code produces the following result:
-![img.png](replication_results.png)
+> ![img.png](replication_results.png)
 > This is exactly the trend observed in the article. Additionally, numerical and analytical solution
 yielded the same results.
